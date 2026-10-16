@@ -10,6 +10,21 @@ import Data.List
 
 import Debug.Trace
 
+helpMessage = "\
+\Usage: base64 [OPTIONS] \n\
+\ \n\
+\A base64 encoder and decoder written in haskell \n\
+\This silliness was inspired by Dave Eddy's bash implementation of the same program \n\
+\ \n\
+\Decode/Encodes data to/from base64 from stdin and outputs to stdout \n\
+\ \n\
+\Options \n\
+\  -h, --help \n\
+\          Show this help message \n\
+\  -d         \n\
+\          Decode from base64 \
+\ "
+
 to_char :: Word32 -> Char
 to_char c
     | c >= 0 && c <= 63 = 
@@ -80,7 +95,10 @@ encode = putStr . newLine . to_chunks_encode . BL.unpack
 decode :: BL.ByteString -> IO ()
 decode = BL.putStr . BL.pack . to_chunks_decode . (filter (\x -> from_char x /= -1)) . BL.unpack
 
-data Arg = Decode | Unknown String deriving ( Eq, Show )
+data Arg = Help
+         | Decode 
+         | Unknown String 
+    deriving ( Eq, Show )
 
 findUnknown :: [Arg] -> Maybe String
 findUnknown [] = Nothing
@@ -89,10 +107,15 @@ findUnknown (_:args) = findUnknown args
 
 base64 :: [Arg] -> BL.ByteString -> IO ()
 base64 args bytes =
+    let isArg = (\x -> elem x args) in
+
     let unknown = findUnknown args in
-    if isJust unknown then 
+    if isJust unknown then do
         putStrLn $ "Unknown argument: " ++ fromJust unknown
-    else if elem Decode args then
+        putStrLn helpMessage
+    else if isArg Help then
+        putStrLn helpMessage
+    else if isArg Decode then
         decode bytes
     else
         encode bytes
@@ -100,6 +123,8 @@ base64 args bytes =
 parseArg :: String -> Arg
 parseArg s = case s of
     "-d" -> Decode
+    "-h" -> Help
+    "--help" -> Help
     _ -> Unknown s
 
 parseArgs :: [String] -> [Arg]
